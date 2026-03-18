@@ -48,10 +48,10 @@
             </objects>
             <point key="canvasLocation" x="2668" y="-28"/>
         </scene>
-        <!--View Controller-->
+        <!--GamePVP View Controller-->
         <scene sceneID="Dd9-Lt-6kr">
             <objects>
-                <viewController id="ISE-bz-Wyj" sceneMemberID="viewController">
+                <viewController id="ISE-bz-Wyj" customClass="GamePVPViewController" customModule="Battleship" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="KTU-t8-qwd">
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -61,7 +61,7 @@
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                             </imageView>
                             <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ymo-3q-0aI">
-                                <rect key="frame" x="156" y="778" width="81" height="35"/>
+                                <rect key="frame" x="150" y="792" width="81" height="35"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <color key="tintColor" red="0.94901967050000002" green="0.94901967050000002" blue="0.94901967050000002" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
                                 <state key="normal" title="Button"/>
@@ -76,10 +76,13 @@
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                             </imageView>
                             <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="wha-5F-2C6">
-                                <rect key="frame" x="168" y="715" width="56" height="55"/>
+                                <rect key="frame" x="162" y="729" width="56" height="55"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <state key="normal" title="Button"/>
                                 <buttonConfiguration key="configuration" style="plain" image="rotateBouton"/>
+                                <connections>
+                                    <action selector="rotate_button:" destination="ISE-bz-Wyj" eventType="touchUpInside" id="fGX-uM-gXx"/>
+                                </connections>
                             </button>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="vKJ-n0-2AW"/>
