@@ -12,6 +12,7 @@ class GamePVPViewController: UIViewController {
     var gameBoard = Array(repeating: Array(repeating: 0, count: 10), count: 10)
     var visualCells: [[UIButton]] = []
     var originalShipCenters: [UIView: CGPoint] = [:]
+    var tour: Int = 0
     
     let gridStackView = UIStackView()
     
@@ -19,6 +20,25 @@ class GamePVPViewController: UIViewController {
         super.viewDidLoad()
         setupGrid()
         setupShipsDock()
+    }
+    // Label de l'écran
+    @IBOutlet weak var info_joueur: UIImageView!
+    @IBOutlet weak var description_tour: UIImageView!
+    
+    @IBAction func game(_ sender: Any) {
+        if tour == 0 {
+            description_tour.image = UIImage(named: "positionement_texte")
+            info_joueur.image = UIImage(named: "joueur2")
+            tour += 1
+        } else {
+            description_tour.image = UIImage(named: "destruction_texte")
+            if tour % 2 == 0 {
+                info_joueur.image = UIImage(named: "joueur1")
+            } else {
+                info_joueur.image = UIImage(named: "joueur2")
+            }
+            tour += 1
+        }
     }
     
     func setupGrid() {
@@ -72,9 +92,9 @@ class GamePVPViewController: UIViewController {
         view.addSubview(dockStackView)
         
         NSLayoutConstraint.activate([
-            dockStackView.topAnchor.constraint(equalTo: gridStackView.bottomAnchor, constant: 30),
+            dockStackView.topAnchor.constraint(equalTo: gridStackView.bottomAnchor, constant: 20),
             dockStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            dockStackView.heightAnchor.constraint(equalToConstant: 200)
+            dockStackView.heightAnchor.constraint(equalToConstant: 150)
         ])
         
         let shipsData: [(name: String, points: Int, height: CGFloat)] = [
