@@ -74,17 +74,18 @@ class GamePVPViewController: UIViewController {
         NSLayoutConstraint.activate([
             dockStackView.topAnchor.constraint(equalTo: gridStackView.bottomAnchor, constant: 30),
             dockStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            dockStackView.heightAnchor.constraint(equalToConstant: 120)
+            dockStackView.heightAnchor.constraint(equalToConstant: 200)
         ])
         
-        let shipsData: [(name: String, points: Int)] = [
-            ("bateauDeuxPoints", 2),
-            ("bateauTroisPoints", 3),
-            ("sousMarinTroisPoints", 3),
-            ("porteAvionsQuatrePoints", 4)
+        let shipsData: [(name: String, points: Int, height: CGFloat)] = [
+            ("bateauDeuxPoints", 2, 60),
+            ("bateauDeuxPoints", 2, 60),
+            ("bateauTroisPoints", 3, 110),
+            ("sousMarinTroisPoints", 3, 110),
+            ("porteAvionsQuatrePoints", 4, 150)
         ]
         
-        let unitHeight: CGFloat = 30.0
+        //let unitHeight: CGFloat = 30.0
         let shipWidth: CGFloat = 25.0
         
         for (index, ship) in shipsData.enumerated() {
@@ -100,7 +101,7 @@ class GamePVPViewController: UIViewController {
             
             NSLayoutConstraint.activate([
                 shipButton.widthAnchor.constraint(equalToConstant: shipWidth),
-                shipButton.heightAnchor.constraint(equalToConstant: unitHeight * CGFloat(ship.points))
+                shipButton.heightAnchor.constraint(equalToConstant: ship.height)
             ])
             
             let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handleShipPan(_:)))
