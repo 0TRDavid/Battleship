@@ -13,7 +13,17 @@ class GamePVPViewController: UIViewController {
     var visualCells: [[UIButton]] = []
     var originalShipCenters: [UIView: CGPoint] = [:]
     
+    var isShipHorizontal: [Int: Bool] = [:]
+    
     let gridStackView = UIStackView()
+    
+    let shipsData: [(name: String, points: Int, height: CGFloat)] = [
+        ("bateauDeuxPoints", 2, 60),
+        ("bateauDeuxPoints", 2, 60),
+        ("bateauTroisPoints", 3, 110),
+        ("sousMarinTroisPoints", 3, 110),
+        ("porteAvionsQuatrePoints", 4, 150)
+    ]
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -47,7 +57,7 @@ class GamePVPViewController: UIViewController {
             for x in 0..<10 {
                 let button = UIButton()
                 button.setBackgroundImage(UIImage(named: "caseEau"), for: .normal)
-                button.backgroundColor = .systemBlue // Pour bien voir la grille si l'image est absente
+                button.backgroundColor = .systemBlue
                 
                 button.tag = y * 10 + x
                 button.addTarget(self, action: #selector(cellTapped(_:)), for: .touchUpInside)
@@ -77,15 +87,6 @@ class GamePVPViewController: UIViewController {
             dockStackView.heightAnchor.constraint(equalToConstant: 200)
         ])
         
-        let shipsData: [(name: String, points: Int, height: CGFloat)] = [
-            ("bateauDeuxPoints", 2, 60),
-            ("bateauDeuxPoints", 2, 60),
-            ("bateauTroisPoints", 3, 110),
-            ("sousMarinTroisPoints", 3, 110),
-            ("porteAvionsQuatrePoints", 4, 150)
-        ]
-        
-        //let unitHeight: CGFloat = 30.0
         let shipWidth: CGFloat = 25.0
         
         for (index, ship) in shipsData.enumerated() {
@@ -96,6 +97,7 @@ class GamePVPViewController: UIViewController {
             shipButton.layer.cornerRadius = 5
             shipButton.tag = index
             
+            isShipHorizontal[index] = false
 
             shipButton.translatesAutoresizingMaskIntoConstraints = false
             
@@ -103,15 +105,33 @@ class GamePVPViewController: UIViewController {
                 shipButton.widthAnchor.constraint(equalToConstant: shipWidth),
                 shipButton.heightAnchor.constraint(equalToConstant: ship.height)
             ])
-            
             let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handleShipPan(_:)))
             shipButton.addGestureRecognizer(panGesture)
-            shipButton.isUserInteractionEnabled = true
+            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleShipTap(_:)))
+            shipButton.addGestureRecognizer(tapGesture)
             
+            shipButton.isUserInteractionEnabled = true
             dockStackView.addArrangedSubview(shipButton)
         }
     }
-    
+        
+    @objc func handleShipTap(_ gesture: UITapGestureRecognizer) {
+        guard let ship = gesture.view else { return }
+        let tag = ship.tag
+        
+        UIView.animate(withDuration: 0.2) {
+            if self.isShipHorizontal[tag] == true {
+                ship.transform = .identity
+                self.isShipHorizontal[tag] = false
+            } else {
+                ship.transform = CGAffineTransform(rotationAngle: -.pi / 2)
+                self.isShipHorizontal[tag] = true
+            }
+        }
+        if ship.superview == view {
+            snapToNearestCell(ship: ship)
+        }
+    }
     
     @objc func handleShipPan(_ gesture: UIPanGestureRecognizer) {
         guard let ship = gesture.view else { return }
@@ -123,10 +143,7 @@ class GamePVPViewController: UIViewController {
                 let absoluteBounds = ship.bounds
                 
                 view.addSubview(ship)
-                
-
                 ship.translatesAutoresizingMaskIntoConstraints = true
-
                 ship.bounds = absoluteBounds
                 ship.center = absoluteCenter
                 
@@ -151,16 +168,18 @@ class GamePVPViewController: UIViewController {
         var closestCell: UIButton?
         var minDistance: CGFloat = .greatestFiniteMagnitude
         
-        let shipOrigin = ship.frame.origin
+        let isHorizontal = isShipHorizontal[ship.tag] ?? false
+        let visualOriginX = isHorizontal ? (ship.center.x - ship.bounds.height / 2) : (ship.center.x - ship.bounds.width / 2)
+        let visualOriginY = isHorizontal ? (ship.center.y - ship.bounds.width / 2) : (ship.center.y - ship.bounds.height / 2)
+        let visualOrigin = CGPoint(x: visualOriginX, y: visualOriginY)
         
         for row in visualCells {
             for cell in row {
                 let cellFrameInView = cell.convert(cell.bounds, to: view)
-                let cellOrigin = cellFrameInView.origin
                 
-                let dx = shipOrigin.x - cellOrigin.x
-                let dy = shipOrigin.y - cellOrigin.y
-                let distance = sqrt(dx * dx + dy * dy)
+                let dx = visualOrigin.x - cellFrameInView.origin.x
+                let dy = visualOrigin.y - cellFrameInView.origin.y
+                let distance = hypot(dx, dy)
                 
                 if distance < minDistance {
                     minDistance = distance
@@ -170,23 +189,46 @@ class GamePVPViewController: UIViewController {
         }
         
         if minDistance < 40, let targetCell = closestCell {
-            let targetFrame = targetCell.convert(targetCell.bounds, to: view)
-            
-            UIView.animate(withDuration: 0.2) {
-                ship.frame.origin.x = targetFrame.midX - (ship.frame.width / 2)
-                
-                ship.frame.origin.y = targetFrame.minY
-            }
-            
             let x = targetCell.tag % 10
             let y = targetCell.tag / 10
-            print("Bateau \(ship.tag) placé en X:\(x), Y:\(y)")
+            let points = shipsData[ship.tag].points
             
-        } else {
-            UIView.animate(withDuration: 0.3) {
-                if let originalCenter = self.originalShipCenters[ship] {
-                    ship.center = originalCenter
+            var isValidPlacement = false
+            
+            if isHorizontal {
+                if x + points <= 10 { isValidPlacement = true }
+            } else {
+                if y + points <= 10 { isValidPlacement = true }
+            }
+            if isValidPlacement {
+                let targetFrame = targetCell.convert(targetCell.bounds, to: view)
+                
+                UIView.animate(withDuration: 0.2) {
+                    if isHorizontal {
+                        ship.center = CGPoint(
+                            x: targetFrame.minX + (ship.bounds.height / 2),
+                            y: targetFrame.midY
+                        )
+                    } else {
+                        ship.center = CGPoint(
+                            x: targetFrame.midX,
+                            y: targetFrame.minY + (ship.bounds.height / 2)
+                        )
+                    }
                 }
+                print("Bon placement : Bateau \(ship.tag) en X:\(x), Y:\(y) (Horizontal: \(isHorizontal))")
+                return
+            } else {
+                print("Mauvais placement : Le bateau dépasse de la grille !")
+            }
+        }
+        
+        UIView.animate(withDuration: 0.3) {
+            ship.transform = .identity
+            self.isShipHorizontal[ship.tag] = false
+            
+            if let originalCenter = self.originalShipCenters[ship] {
+                ship.center = originalCenter
             }
         }
     }
@@ -195,12 +237,10 @@ class GamePVPViewController: UIViewController {
         let x = sender.tag % 10
         let y = sender.tag / 10
         
-        print("Le joueur a tiré en X: \(x), Y: \(y)")
-        
         if gameBoard[y][x] == 1 {
-            sender.backgroundColor = .orange // Touché !
+            sender.backgroundColor = .orange
         } else {
-            sender.backgroundColor = .white // Dans l'eau...
+            sender.backgroundColor = .white
             sender.alpha = 0.5
         }
     }
