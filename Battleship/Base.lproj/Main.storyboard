@@ -116,6 +116,7 @@
                         <nil key="title"/>
                     </navigationItem>
                     <connections>
+                        <outlet property="bouton_suivant" destination="1lO-bO-amM" id="xM5-zh-rHD"/>
                         <outlet property="description_tour" destination="xfe-Gr-WkB" id="h0y-TM-I2U"/>
                         <outlet property="info_joueur" destination="8Kj-nB-gmP" id="R4z-Ne-k33"/>
                     </connections>
