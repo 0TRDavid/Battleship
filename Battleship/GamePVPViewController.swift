@@ -34,20 +34,40 @@ class GamePVPViewController: UIViewController {
     // Label de l'écran
     @IBOutlet weak var info_joueur: UIImageView!
     @IBOutlet weak var description_tour: UIImageView!
+    @IBOutlet weak var bouton_suivant: UIButton!
     
     @IBAction func game(_ sender: Any) {
         if tour == 0 {
             description_tour.image = UIImage(named: "positionement_texte")
-            info_joueur.image = UIImage(named: "joueur2")
-            tour += 1
-        } else {
+            show_player()
+        } else if tour == 1 {
             description_tour.image = UIImage(named: "destruction_texte")
-            if tour % 2 == 0 {
-                info_joueur.image = UIImage(named: "joueur1")
-            } else {
-                info_joueur.image = UIImage(named: "joueur2")
-            }
-            tour += 1
+            show_player()
+        } else {
+            show_player()
+        }
+    }
+    
+    // Gestion des noms de joueur
+    func show_player(){
+        if tour % 2 == 0 {
+            info_joueur.image = UIImage(named: "joueur2")
+        } else {
+            info_joueur.image = UIImage(named: "joueur1")
+        }
+        tour += 1
+    }
+    
+    // Etat de la grille
+    @objc func cellTapped(_ sender: UIButton) {
+        let x = sender.tag % 10
+        let y = sender.tag / 10
+        
+        if gameBoard[y][x] == 1 {
+            sender.backgroundColor = .orange
+        } else {
+            sender.backgroundColor = .white
+            sender.alpha = 0.5
         }
     }
     
@@ -255,19 +275,6 @@ class GamePVPViewController: UIViewController {
             if let originalCenter = self.originalShipCenters[ship] {
                 ship.center = originalCenter
             }
-        }
-    }
-    
-    // Etat de la grille
-    @objc func cellTapped(_ sender: UIButton) {
-        let x = sender.tag % 10
-        let y = sender.tag / 10
-        
-        if gameBoard[y][x] == 1 {
-            sender.backgroundColor = .orange
-        } else {
-            sender.backgroundColor = .white
-            sender.alpha = 0.5
         }
     }
 }
