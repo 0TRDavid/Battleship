@@ -100,6 +100,8 @@ class GamePVPViewController: UIViewController {
                 isHit = true
             } else {
                 print("Joueur 1 : À l'eau...")
+                
+                
                 player2Board[y][x] = 3 // Eau touchée
             }
         }
@@ -122,13 +124,16 @@ class GamePVPViewController: UIViewController {
         guard isValidShot else { return }
         if isHit {
             sender.setImage(UIImage(named: "explosion"), for: .normal)
+            if checkVictory() {
+                handleVictory()
+                return
+            }
         } else {
             sender.backgroundColor = .white
             sender.alpha = 0.5
             sender.setImage(nil, for: .normal)
         }
         gridStackView.isUserInteractionEnabled = false
-        
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.show_player()
             self.refreshGridForCurrentPlayer()
@@ -433,4 +438,38 @@ class GamePVPViewController: UIViewController {
             }
         }
     }
+    
+    func checkVictory() -> Bool {
+        let boardToCheck = (currentPlayerPlacing == 1) ? player2Board : player1Board
+        for row in boardToCheck {
+            for cell in row {
+                if cell == 1 {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    
+    func handleVictory() {
+        print("VICTOIRE DU JOUEUR \(currentPlayerPlacing) !")
+        
+        gridStackView.isUserInteractionEnabled = false
+        
+        let alert = UIAlertController(
+            title: "VICTOIRE !",
+            message: "Le Joueur \(currentPlayerPlacing) a détruit toute la flotte ennemie bomboclaat",
+            preferredStyle: .alert
+        )
+        
+        let backToLobby = UIAlertAction(title: "Retour à l'accueil", style: .default) { _ in
+            print("Retour à l'accueil")
+            self.navigationController?.popToRootViewController(animated: true)
+        }
+        
+        alert.addAction(backToLobby)
+        
+        present(alert, animated: true)
+    }
+    
 }
