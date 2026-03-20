@@ -51,6 +51,7 @@ class GamePVPViewController: UIViewController {
         }
     }
     
+    // Fonction pour initialiser la grille
     func setupGrid() {
         gridStackView.axis = .vertical
         gridStackView.distribution = .fillEqually
@@ -61,8 +62,8 @@ class GamePVPViewController: UIViewController {
         
         NSLayoutConstraint.activate([
             gridStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            gridStackView.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -50),
-            gridStackView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.9),
+            gridStackView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            gridStackView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.98),
             gridStackView.heightAnchor.constraint(equalTo: gridStackView.widthAnchor)
         ])
         
@@ -90,21 +91,22 @@ class GamePVPViewController: UIViewController {
         }
     }
     
+    // Fonction pour initialiser les bateaux en dessous de la grille
     func setupShipsDock() {
         let dockStackView = UIStackView()
         dockStackView.axis = .horizontal
         
         dockStackView.distribution = .equalSpacing
         dockStackView.alignment = .bottom
-        dockStackView.spacing = 20
+        dockStackView.spacing = 30
         
         dockStackView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(dockStackView)
         
         NSLayoutConstraint.activate([
-            dockStackView.topAnchor.constraint(equalTo: gridStackView.bottomAnchor, constant: 20),
+            dockStackView.topAnchor.constraint(equalTo: gridStackView.bottomAnchor),
             dockStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            dockStackView.heightAnchor.constraint(equalToConstant: 150)
+            dockStackView.heightAnchor.constraint(equalToConstant: 140)
         ])
         
         let shipWidth: CGFloat = 25.0
@@ -134,7 +136,8 @@ class GamePVPViewController: UIViewController {
             dockStackView.addArrangedSubview(shipButton)
         }
     }
-        
+    
+    // Fonction sur les bateaux pour tourner les bateaux
     @objc func handleShipTap(_ gesture: UITapGestureRecognizer) {
         guard let ship = gesture.view else { return }
         let tag = ship.tag
@@ -152,6 +155,7 @@ class GamePVPViewController: UIViewController {
             snapToNearestCell(ship: ship)
         }
     }
+    
     
     @objc func handleShipPan(_ gesture: UIPanGestureRecognizer) {
         guard let ship = gesture.view else { return }
@@ -183,6 +187,7 @@ class GamePVPViewController: UIViewController {
             break
         }
     }
+    
     
     func snapToNearestCell(ship: UIView) {
         var closestCell: UIButton?
@@ -253,6 +258,7 @@ class GamePVPViewController: UIViewController {
         }
     }
     
+    // Etat de la grille
     @objc func cellTapped(_ sender: UIButton) {
         let x = sender.tag % 10
         let y = sender.tag / 10
