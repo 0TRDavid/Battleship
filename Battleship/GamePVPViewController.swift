@@ -9,15 +9,21 @@ import UIKit
 
 class GamePVPViewController: UIViewController {
     
-    var gameBoard = Array(repeating: Array(repeating: 0, count: 10), count: 10)
+    var tour: Int = 0
+    var currentPlayerPlacing = 1
+    var player1Board = Array(repeating: Array(repeating: 0, count: 10), count: 10)
+    var player2Board = Array(repeating: Array(repeating: 0, count: 10), count: 10)
+    
     var visualCells: [[UIButton]] = []
     var originalShipCenters: [UIView: CGPoint] = [:]
-    var tour: Int = 0
-    
     var isShipHorizontal: [Int: Bool] = [:]
+    var placedShipsTags: Set<Int> = []
     
+    // Grille principal + dock bateaux
     let gridStackView = UIStackView()
+    let dockStackView = UIStackView()
     
+    // Listing des bateau à placer
     let shipsData: [(name: String, points: Int, height: CGFloat)] = [
         ("bateauDeuxPoints", 2, 60),
         ("bateauDeuxPoints", 2, 60),
@@ -26,11 +32,13 @@ class GamePVPViewController: UIViewController {
         ("porteAvionsQuatrePoints", 4, 150)
     ]
     
+    // Init de la grille et des bateaux
     override func viewDidLoad() {
         super.viewDidLoad()
         setupGrid()
         setupShipsDock()
     }
+    
     // Label de l'écran
     @IBOutlet weak var info_joueur: UIImageView!
     @IBOutlet weak var description_tour: UIImageView!
@@ -38,12 +46,16 @@ class GamePVPViewController: UIViewController {
     
     @IBAction func game(_ sender: Any) {
         if tour == 0 {
+            resetShipsToDock()
             description_tour.image = UIImage(named: "positionement_texte")
             show_player()
         } else if tour == 1 {
+            resetShipsToDock()
             description_tour.image = UIImage(named: "destruction_texte")
+            DispawnDock()
             show_player()
         } else {
+            // Logique d'attaque
             show_player()
         }
     }
@@ -52,8 +64,10 @@ class GamePVPViewController: UIViewController {
     func show_player(){
         if tour % 2 == 0 {
             info_joueur.image = UIImage(named: "joueur2")
+            currentPlayerPlacing = 2
         } else {
             info_joueur.image = UIImage(named: "joueur1")
+            currentPlayerPlacing = 1
         }
         tour += 1
     }
@@ -63,11 +77,33 @@ class GamePVPViewController: UIViewController {
         let x = sender.tag % 10
         let y = sender.tag / 10
         
-        if gameBoard[y][x] == 1 {
+        if player1Board[y][x] == 1 {
             sender.backgroundColor = .orange
         } else {
             sender.backgroundColor = .white
             sender.alpha = 0.5
+        }
+    }
+    
+    // Fonction pour remettre les visuels des bateaux à zéro pour le joueur suivant
+    func resetShipsToDock() {
+        for (ship, originalCenter) in originalShipCenters {
+            UIView.animate(withDuration: 0.5) {
+                ship.center = originalCenter
+                ship.transform = .identity
+            }
+        }
+    }
+    
+    // Clear du dock
+    func DispawnDock(){
+        UIView.animate(withDuration: 0.5, animations: {
+            self.dockStackView.alpha = 0 // On le rend invisible
+                }) { _ in
+                    self.dockStackView.isHidden = true
+                    for (ship, _) in self.originalShipCenters {
+                        ship.isHidden = true
+                    }
         }
     }
     
@@ -113,7 +149,6 @@ class GamePVPViewController: UIViewController {
     
     // Fonction pour initialiser les bateaux en dessous de la grille
     func setupShipsDock() {
-        let dockStackView = UIStackView()
         dockStackView.axis = .horizontal
         
         dockStackView.distribution = .equalSpacing
@@ -261,6 +296,25 @@ class GamePVPViewController: UIViewController {
                         )
                     }
                 }
+                
+                // Stockage en mémoire le placement des beateaux
+                let points = shipsData[ship.tag].points
+                    let x = targetCell.tag % 10
+                    let y = targetCell.tag / 10
+                    let isHorizontal = isShipHorizontal[ship.tag] ?? false
+
+                    // On remplit la grille du joueur actuel
+                    for i in 0..<points {
+                        if currentPlayerPlacing == 1 {
+                            if isHorizontal { player1Board[y][x + i] = 1 }
+                            else { player1Board[y + i][x] = 1 }
+                        } else {
+                            if isHorizontal { player2Board[y][x + i] = 1 }
+                            else { player2Board[y + i][x] = 1 }
+                        }
+                    }
+                    return
+                
                 print("Bon placement : Bateau \(ship.tag) en X:\(x), Y:\(y) (Horizontal: \(isHorizontal))")
                 return
             } else {
