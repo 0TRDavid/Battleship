@@ -18,6 +18,7 @@ class GamePVPViewController: UIViewController {
     var originalShipCenters: [UIView: CGPoint] = [:]
     var isShipHorizontal: [Int: Bool] = [:]
     var placedShipsTags: Set<Int> = []
+    var currentShipPlacement: [Int: [(x: Int, y: Int)]] = [:]
     
     // Grille principal + dock bateaux
     let gridStackView = UIStackView()
@@ -47,16 +48,20 @@ class GamePVPViewController: UIViewController {
     @IBAction func game(_ sender: Any) {
         if tour == 0 {
             resetShipsToDock()
+            currentShipPlacement.removeAll()
             description_tour.image = UIImage(named: "positionement_texte")
             show_player()
         } else if tour == 1 {
             resetShipsToDock()
+            currentShipPlacement.removeAll()
             description_tour.image = UIImage(named: "destruction_texte")
             DispawnDock()
             show_player()
+            refreshGridForCurrentPlayer()
+            bouton_suivant.isHidden = true
         } else {
-            // Logique d'attaque
             show_player()
+            refreshGridForCurrentPlayer()
         }
     }
     
@@ -74,14 +79,60 @@ class GamePVPViewController: UIViewController {
     
     // Etat de la grille
     @objc func cellTapped(_ sender: UIButton) {
+        guard tour >= 2 else { return }
+        
         let x = sender.tag % 10
         let y = sender.tag / 10
         
-        if player1Board[y][x] == 1 {
-            sender.backgroundColor = .orange
+        var isHit = false
+        var isValidShot = false
+        
+        if currentPlayerPlacing == 1 {
+            if player2Board[y][x] == 2 || player2Board[y][x] == 3 {
+                print("Case déjà ciblée !")
+                return
+            }
+            
+            isValidShot = true
+            if player2Board[y][x] == 1 {
+                print("Joueur 1 : Touché en X:\(x), Y:\(y) !")
+                player2Board[y][x] = 2 //Bateau touché
+                isHit = true
+            } else {
+                print("Joueur 1 : À l'eau...")
+                player2Board[y][x] = 3 // Eau touchée
+            }
+        }
+        else {
+            if player1Board[y][x] == 2 || player1Board[y][x] == 3 {
+                print("Case déjà ciblée !")
+                return
+            }
+            
+            isValidShot = true
+            if player1Board[y][x] == 1 {
+                print("Joueur 2 : Touché en X:\(x), Y:\(y) !")
+                player1Board[y][x] = 2 // Bateau touché
+                isHit = true
+            } else {
+                print("Joueur 2 : À l'eau...")
+                player1Board[y][x] = 3 //Eau touchée
+            }
+        }
+        guard isValidShot else { return }
+        if isHit {
+            sender.setImage(UIImage(named: "explosion"), for: .normal)
         } else {
             sender.backgroundColor = .white
             sender.alpha = 0.5
+            sender.setImage(nil, for: .normal)
+        }
+        gridStackView.isUserInteractionEnabled = false
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            self.show_player()
+            self.refreshGridForCurrentPlayer()
+            self.gridStackView.isUserInteractionEnabled = true
         }
     }
     
@@ -99,11 +150,11 @@ class GamePVPViewController: UIViewController {
     func DispawnDock(){
         UIView.animate(withDuration: 0.5, animations: {
             self.dockStackView.alpha = 0 // On le rend invisible
-                }) { _ in
-                    self.dockStackView.isHidden = true
-                    for (ship, _) in self.originalShipCenters {
-                        ship.isHidden = true
-                    }
+        }) { _ in
+            self.dockStackView.isHidden = true
+            for (ship, _) in self.originalShipCenters {
+                ship.isHidden = true
+            }
         }
     }
     
@@ -175,7 +226,7 @@ class GamePVPViewController: UIViewController {
             shipButton.tag = index
             
             isShipHorizontal[index] = false
-
+            
             shipButton.translatesAutoresizingMaskIntoConstraints = false
             
             NSLayoutConstraint.activate([
@@ -196,6 +247,7 @@ class GamePVPViewController: UIViewController {
     @objc func handleShipTap(_ gesture: UITapGestureRecognizer) {
         guard let ship = gesture.view else { return }
         let tag = ship.tag
+        removeShipFromBoard(tag: tag)
         
         UIView.animate(withDuration: 0.2) {
             if self.isShipHorizontal[tag] == true {
@@ -214,9 +266,9 @@ class GamePVPViewController: UIViewController {
     
     @objc func handleShipPan(_ gesture: UIPanGestureRecognizer) {
         guard let ship = gesture.view else { return }
-        
         switch gesture.state {
         case .began:
+            removeShipFromBoard(tag: ship.tag)
             if let stackView = ship.superview as? UIStackView {
                 let absoluteCenter = view.convert(ship.center, from: stackView)
                 let absoluteBounds = ship.bounds
@@ -249,6 +301,7 @@ class GamePVPViewController: UIViewController {
         var minDistance: CGFloat = .greatestFiniteMagnitude
         
         let isHorizontal = isShipHorizontal[ship.tag] ?? false
+        
         let visualOriginX = isHorizontal ? (ship.center.x - ship.bounds.height / 2) : (ship.center.x - ship.bounds.width / 2)
         let visualOriginY = isHorizontal ? (ship.center.y - ship.bounds.width / 2) : (ship.center.y - ship.bounds.height / 2)
         let visualOrigin = CGPoint(x: visualOriginX, y: visualOriginY)
@@ -280,6 +333,22 @@ class GamePVPViewController: UIViewController {
             } else {
                 if y + points <= 10 { isValidPlacement = true }
             }
+            
+            if isValidPlacement {
+                for i in 0..<points {
+                    let currentX = isHorizontal ? x + i : x
+                    let currentY = isHorizontal ? y : y + i
+                    
+                    let boardToCheck = currentPlayerPlacing == 1 ? player1Board : player2Board
+                    
+                    if boardToCheck[currentY][currentX] == 1 {
+                        isValidPlacement = false
+                        print("Collision détectée en X:\(currentX), Y:\(currentY) ! Placement annulé.")
+                        break
+                    }
+                }
+            }
+            
             if isValidPlacement {
                 let targetFrame = targetCell.convert(targetCell.bounds, to: view)
                 
@@ -297,28 +366,26 @@ class GamePVPViewController: UIViewController {
                     }
                 }
                 
-                // Stockage en mémoire le placement des beateaux
-                let points = shipsData[ship.tag].points
-                    let x = targetCell.tag % 10
-                    let y = targetCell.tag / 10
-                    let isHorizontal = isShipHorizontal[ship.tag] ?? false
-
-                    // On remplit la grille du joueur actuel
-                    for i in 0..<points {
-                        if currentPlayerPlacing == 1 {
-                            if isHorizontal { player1Board[y][x + i] = 1 }
-                            else { player1Board[y + i][x] = 1 }
-                        } else {
-                            if isHorizontal { player2Board[y][x + i] = 1 }
-                            else { player2Board[y + i][x] = 1 }
-                        }
-                    }
-                    return
+                var newOccupiedCells: [(x: Int, y: Int)] = []
                 
-                print("Bon placement : Bateau \(ship.tag) en X:\(x), Y:\(y) (Horizontal: \(isHorizontal))")
+                for i in 0..<points {
+                    let currentX = isHorizontal ? x + i : x
+                    let currentY = isHorizontal ? y : y + i
+                    
+                    if self.currentPlayerPlacing == 1 {
+                        self.player1Board[currentY][currentX] = 1
+                    } else {
+                        self.player2Board[currentY][currentX] = 1
+                    }
+                    newOccupiedCells.append((x: currentX, y: currentY))
+                }
+                
+                self.currentShipPlacement[ship.tag] = newOccupiedCells
+                print("Sauvegardé : Bateau \(ship.tag) occupe \(newOccupiedCells)")
+                
                 return
             } else {
-                print("Mauvais placement : Le bateau dépasse de la grille !")
+                print("Mauvais placement : Le bateau dépasse de la grille ou rentre en collision !")
             }
         }
         
@@ -328,6 +395,41 @@ class GamePVPViewController: UIViewController {
             
             if let originalCenter = self.originalShipCenters[ship] {
                 ship.center = originalCenter
+            }
+        }
+    }
+    
+    func removeShipFromBoard(tag: Int) {
+        if let occupiedCell = currentShipPlacement[tag] {
+            for cell in occupiedCell {
+                if currentPlayerPlacing == 1 {
+                    player1Board[cell.y][cell.x] = 0
+                } else {
+                    player2Board[cell.y][cell.x] = 0
+                }
+            }
+            currentShipPlacement.removeValue(forKey: tag)
+        }
+    }
+    func refreshGridForCurrentPlayer() {
+        for y in 0..<10 {
+            for x in 0..<10 {
+                let button = visualCells[y][x]
+                
+                let boardToDisplay = (currentPlayerPlacing == 1) ? player2Board : player1Board
+                let cellState = boardToDisplay[y][x]
+                
+                button.backgroundColor = .systemBlue
+                button.alpha = 1.0
+                button.setImage(nil, for: .normal)
+                button.setBackgroundImage(UIImage(named: "caseEau"), for: .normal)
+                
+                if cellState == 2 {
+                    button.setImage(UIImage(named: "explosion"), for: .normal)
+                } else if cellState == 3 {
+                    button.backgroundColor = .white
+                    button.alpha = 0.5
+                }
             }
         }
     }
