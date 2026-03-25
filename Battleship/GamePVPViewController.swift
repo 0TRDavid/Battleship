@@ -9,22 +9,20 @@ import UIKit
 
 class GamePVPViewController: UIViewController {
     
+    // Info de base pour le déroulement de la partie
     var tour: Int = 0
     var currentPlayerPlacing = 1
+    
+    // Initialisation des grilles J1 et J2
     var player1Board = Array(repeating: Array(repeating: 0, count: 10), count: 10)
     var player2Board = Array(repeating: Array(repeating: 0, count: 10), count: 10)
     
-    var visualCells: [[UIButton]] = []
-    var originalShipCenters: [UIView: CGPoint] = [:]
-    var isShipHorizontal: [Int: Bool] = [:]
-    var placedShipsTags: Set<Int> = []
-    var currentShipPlacement: [Int: [(x: Int, y: Int)]] = [:]
-    
-    // Grille principal + dock bateaux
+    // Grille principal + boutons
     let gridStackView = UIStackView()
-    let dockStackView = UIStackView()
+    var visualCells: [[UIButton]] = []
     
-    // Listing des bateau à placer
+    // Init du dock + listing des bateau à placer
+    let dockStackView = UIStackView()
     let shipsData: [(name: String, points: Int, height: CGFloat)] = [
         ("bateauDeuxPoints", 2, 60),
         ("bateauDeuxPoints", 2, 60),
@@ -32,6 +30,12 @@ class GamePVPViewController: UIViewController {
         ("sousMarinTroisPoints", 3, 110),
         ("porteAvionsQuatrePoints", 4, 150)
     ]
+    
+    // Variable de contrôle des placements de bateaux
+    var originalShipCenters: [UIView: CGPoint] = [:]
+    var isShipHorizontal: [Int: Bool] = [:]
+    var placedShipsTags: Set<Int> = []
+    var currentShipPlacement: [Int: [(x: Int, y: Int)]] = [:]
     
     // Init de la grille et des bateaux
     override func viewDidLoad() {
@@ -77,69 +81,6 @@ class GamePVPViewController: UIViewController {
         tour += 1
     }
     
-    // Etat de la grille
-    @objc func cellTapped(_ sender: UIButton) {
-        guard tour >= 2 else { return }
-        
-        let x = sender.tag % 10
-        let y = sender.tag / 10
-        
-        var isHit = false
-        var isValidShot = false
-        
-        if currentPlayerPlacing == 1 {
-            if player2Board[y][x] == 2 || player2Board[y][x] == 3 {
-                print("Case déjà ciblée !")
-                return
-            }
-            
-            isValidShot = true
-            if player2Board[y][x] == 1 {
-                print("Joueur 1 : Touché en X:\(x), Y:\(y) !")
-                player2Board[y][x] = 2 //Bateau touché
-                isHit = true
-            } else {
-                print("Joueur 1 : À l'eau...")
-                
-                
-                player2Board[y][x] = 3 // Eau touchée
-            }
-        }
-        else {
-            if player1Board[y][x] == 2 || player1Board[y][x] == 3 {
-                print("Case déjà ciblée !")
-                return
-            }
-            
-            isValidShot = true
-            if player1Board[y][x] == 1 {
-                print("Joueur 2 : Touché en X:\(x), Y:\(y) !")
-                player1Board[y][x] = 2 // Bateau touché
-                isHit = true
-            } else {
-                print("Joueur 2 : À l'eau...")
-                player1Board[y][x] = 3 //Eau touchée
-            }
-        }
-        guard isValidShot else { return }
-        if isHit {
-            sender.setImage(UIImage(named: "explosion"), for: .normal)
-            if checkVictory() {
-                handleVictory()
-                return
-            }
-        } else {
-            sender.backgroundColor = .white
-            sender.alpha = 0.5
-            sender.setImage(nil, for: .normal)
-        }
-        gridStackView.isUserInteractionEnabled = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.show_player()
-            self.refreshGridForCurrentPlayer()
-            self.gridStackView.isUserInteractionEnabled = true
-        }
-    }
     
     // Fonction pour remettre les visuels des bateaux à zéro pour le joueur suivant
     func resetShipsToDock() {
@@ -160,46 +101,6 @@ class GamePVPViewController: UIViewController {
             for (ship, _) in self.originalShipCenters {
                 ship.isHidden = true
             }
-        }
-    }
-    
-    // Fonction pour initialiser la grille
-    func setupGrid() {
-        gridStackView.axis = .vertical
-        gridStackView.distribution = .fillEqually
-        gridStackView.spacing = 1
-        gridStackView.translatesAutoresizingMaskIntoConstraints = false
-        gridStackView.backgroundColor = .white
-        view.addSubview(gridStackView)
-        
-        NSLayoutConstraint.activate([
-            gridStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            gridStackView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            gridStackView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.98),
-            gridStackView.heightAnchor.constraint(equalTo: gridStackView.widthAnchor)
-        ])
-        
-        for y in 0..<10 {
-            let rowStack = UIStackView()
-            rowStack.axis = .horizontal
-            rowStack.distribution = .fillEqually
-            rowStack.spacing = 1
-            
-            var rowButtons: [UIButton] = []
-            
-            for x in 0..<10 {
-                let button = UIButton()
-                button.setBackgroundImage(UIImage(named: "caseEau"), for: .normal)
-                button.backgroundColor = .systemBlue
-                
-                button.tag = y * 10 + x
-                button.addTarget(self, action: #selector(cellTapped(_:)), for: .touchUpInside)
-                
-                rowStack.addArrangedSubview(button)
-                rowButtons.append(button)
-            }
-            gridStackView.addArrangedSubview(rowStack)
-            visualCells.append(rowButtons)
         }
     }
     
@@ -472,4 +373,111 @@ class GamePVPViewController: UIViewController {
         present(alert, animated: true)
     }
     
+    // Fonction pour initialiser la grille de boutons
+    func setupGrid() {
+        // Info de base sur le grille
+        gridStackView.axis = .vertical
+        gridStackView.distribution = .fillEqually
+        gridStackView.spacing = 1
+        gridStackView.translatesAutoresizingMaskIntoConstraints = false
+        gridStackView.backgroundColor = .white
+        view.addSubview(gridStackView)
+        
+        NSLayoutConstraint.activate([
+            gridStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            gridStackView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            gridStackView.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.98),
+            gridStackView.heightAnchor.constraint(equalTo: gridStackView.widthAnchor)
+        ])
+        
+        // Remplissage de la grille de bouton
+        for y in 0..<10 {
+            // Ajout de ligne
+            let rowStack = UIStackView()
+            rowStack.axis = .horizontal
+            rowStack.distribution = .fillEqually
+            rowStack.spacing = 1
+            
+            // Remplissage des boutons sur une ligne
+            var rowButtons: [UIButton] = []
+            for x in 0..<10 {
+                let button = UIButton()
+                button.setBackgroundImage(UIImage(named: "caseEau"), for: .normal)
+                button.backgroundColor = .systemBlue
+                
+                button.tag = y * 10 + x
+                button.addTarget(self, action: #selector(cellTapped(_:)), for: .touchUpInside) // Ajout d'une fonction personalisé
+                
+                rowStack.addArrangedSubview(button)
+                rowButtons.append(button)
+            }
+            
+            gridStackView.addArrangedSubview(rowStack)
+            visualCells.append(rowButtons)
+        }
+    }
+    
+    // Gestion de
+    @objc func cellTapped(_ sender: UIButton) {
+        guard tour >= 2 else { return }
+        
+        let x = sender.tag % 10
+        let y = sender.tag / 10
+        
+        var isHit = false
+        var isValidShot = false
+        
+        if currentPlayerPlacing == 1 {
+            if player2Board[y][x] == 2 || player2Board[y][x] == 3 {
+                print("Case déjà ciblée !")
+                return
+            }
+            
+            isValidShot = true
+            if player2Board[y][x] == 1 {
+                print("Joueur 1 : Touché en X:\(x), Y:\(y) !")
+                player2Board[y][x] = 2 //Bateau touché
+                isHit = true
+            } else {
+                print("Joueur 1 : À l'eau...")
+                player2Board[y][x] = 3 // Eau touchée
+            }
+        }
+        else {
+            if player1Board[y][x] == 2 || player1Board[y][x] == 3 {
+                print("Case déjà ciblée !")
+                return
+            }
+            
+            isValidShot = true
+            if player1Board[y][x] == 1 {
+                print("Joueur 2 : Touché en X:\(x), Y:\(y) !")
+                player1Board[y][x] = 2 // Bateau touché
+                isHit = true
+            } else {
+                print("Joueur 2 : À l'eau...")
+                player1Board[y][x] = 3 //Eau touchée
+            }
+        }
+        
+        guard isValidShot else { return }
+        if isHit {
+            sender.setImage(UIImage(named: "explosion"), for: .normal)
+            if checkVictory() {
+                handleVictory()
+                return
+            }
+        } else {
+            sender.backgroundColor = .white
+            sender.alpha = 0.5
+            sender.setImage(nil, for: .normal)
+        }
+        gridStackView.isUserInteractionEnabled = false
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            self.show_player()
+            self.refreshGridForCurrentPlayer()
+            self.gridStackView.isUserInteractionEnabled = true
+        }
+    }
 }
