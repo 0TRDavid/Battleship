@@ -49,6 +49,7 @@ class GamePVPViewController: UIViewController {
     @IBOutlet weak var description_tour: UIImageView!
     @IBOutlet weak var bouton_suivant: UIButton!
     
+    // Gestion phase de preparation et attaque
     @IBAction func game(_ sender: Any) {
         if tour == 0 {
             resetShipsToDock()
@@ -81,38 +82,75 @@ class GamePVPViewController: UIViewController {
         tour += 1
     }
     
-    
-    // Fonction pour remettre les visuels des bateaux à zéro pour le joueur suivant
-    func resetShipsToDock() {
-        for (ship, originalCenter) in originalShipCenters {
-            UIView.animate(withDuration: 0.5) {
-                ship.center = originalCenter
-                ship.transform = .identity
+    // Change de grille pour le prochain joueur
+    func refreshGridForCurrentPlayer() {
+        for y in 0..<10 {
+            for x in 0..<10 {
+                let button = visualCells[y][x]
+                
+                let boardToDisplay = (currentPlayerPlacing == 1) ? player2Board : player1Board
+                let cellState = boardToDisplay[y][x]
+                
+                button.backgroundColor = .systemBlue
+                button.alpha = 1.0
+                button.setImage(nil, for: .normal)
+                button.setBackgroundImage(UIImage(named: "caseEau"), for: .normal)
+                
+                if cellState == 2 {
+                    button.setImage(UIImage(named: "explosion"), for: .normal)
+                } else if cellState == 3 {
+                    button.backgroundColor = .white
+                    button.alpha = 0.5
+                }
             }
         }
     }
     
-    // Clear du dock
-    func DispawnDock(){
-        UIView.animate(withDuration: 0.5, animations: {
-            self.dockStackView.alpha = 0 // On le rend invisible
-        }) { _ in
-            self.dockStackView.isHidden = true
-            for (ship, _) in self.originalShipCenters {
-                ship.isHidden = true
+    // Vérifier que tous les bateaux soit touché en parcourant la grille
+    func checkVictory() -> Bool {
+        let boardToCheck = (currentPlayerPlacing == 1) ? player2Board : player1Board
+        for row in boardToCheck {
+            for cell in row {
+                if cell == 1 {
+                    return false
+                }
             }
         }
+        return true
     }
+    
+    // Annoncer la victoire du joueur
+    func handleVictory() {
+        print("VICTOIRE DU JOUEUR \(currentPlayerPlacing) !")
+        
+        gridStackView.isUserInteractionEnabled = false
+        
+        let alert = UIAlertController(
+            title: "VICTOIRE !",
+            message: "Le Joueur \(currentPlayerPlacing) a détruit toute la flotte ennemie bomboclaat",
+            preferredStyle: .alert
+        )
+        
+        let backToLobby = UIAlertAction(title: "Retour à l'accueil", style: .default) { _ in
+            print("Retour à l'accueil")
+            self.navigationController?.popToRootViewController(animated: true)
+        }
+        
+        alert.addAction(backToLobby)
+        
+        present(alert, animated: true)
+    }
+    
     
     // Fonction pour initialiser les bateaux en dessous de la grille
     func setupShipsDock() {
-        dockStackView.axis = .horizontal
         
+        dockStackView.axis = .horizontal
         dockStackView.distribution = .equalSpacing
         dockStackView.alignment = .bottom
         dockStackView.spacing = 30
-        
         dockStackView.translatesAutoresizingMaskIntoConstraints = false
+        
         view.addSubview(dockStackView)
         
         NSLayoutConstraint.activate([
@@ -125,27 +163,25 @@ class GamePVPViewController: UIViewController {
         
         for (index, ship) in shipsData.enumerated() {
             let shipButton = UIButton()
+            let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handleShipPan(_:)))
+            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleShipTap(_:)))
             
             shipButton.setImage(UIImage(named: ship.name), for: .normal)
             shipButton.imageView?.contentMode = .scaleAspectFit
             shipButton.layer.cornerRadius = 5
             shipButton.tag = index
-            
-            isShipHorizontal[index] = false
-            
             shipButton.translatesAutoresizingMaskIntoConstraints = false
+            shipButton.addGestureRecognizer(panGesture)
+            shipButton.addGestureRecognizer(tapGesture)
+            shipButton.isUserInteractionEnabled = true
+            
+            dockStackView.addArrangedSubview(shipButton)
+            isShipHorizontal[index] = false
             
             NSLayoutConstraint.activate([
                 shipButton.widthAnchor.constraint(equalToConstant: shipWidth),
                 shipButton.heightAnchor.constraint(equalToConstant: ship.height)
             ])
-            let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handleShipPan(_:)))
-            shipButton.addGestureRecognizer(panGesture)
-            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleShipTap(_:)))
-            shipButton.addGestureRecognizer(tapGesture)
-            
-            shipButton.isUserInteractionEnabled = true
-            dockStackView.addArrangedSubview(shipButton)
         }
     }
     
@@ -201,7 +237,7 @@ class GamePVPViewController: UIViewController {
         }
     }
     
-    
+    // Gestion du placement des bateaux
     func snapToNearestCell(ship: UIView) {
         var closestCell: UIButton?
         var minDistance: CGFloat = .greatestFiniteMagnitude
@@ -246,7 +282,7 @@ class GamePVPViewController: UIViewController {
                     let currentY = isHorizontal ? y : y + i
                     
                     let boardToCheck = currentPlayerPlacing == 1 ? player1Board : player2Board
-                    
+                    // Gestion colision
                     if boardToCheck[currentY][currentX] == 1 {
                         isValidPlacement = false
                         print("Collision détectée en X:\(currentX), Y:\(currentY) ! Placement annulé.")
@@ -305,6 +341,7 @@ class GamePVPViewController: UIViewController {
         }
     }
     
+    //Retourne le bateau en cours sur le dock
     func removeShipFromBoard(tag: Int) {
         if let occupiedCell = currentShipPlacement[tag] {
             for cell in occupiedCell {
@@ -317,60 +354,27 @@ class GamePVPViewController: UIViewController {
             currentShipPlacement.removeValue(forKey: tag)
         }
     }
-    func refreshGridForCurrentPlayer() {
-        for y in 0..<10 {
-            for x in 0..<10 {
-                let button = visualCells[y][x]
-                
-                let boardToDisplay = (currentPlayerPlacing == 1) ? player2Board : player1Board
-                let cellState = boardToDisplay[y][x]
-                
-                button.backgroundColor = .systemBlue
-                button.alpha = 1.0
-                button.setImage(nil, for: .normal)
-                button.setBackgroundImage(UIImage(named: "caseEau"), for: .normal)
-                
-                if cellState == 2 {
-                    button.setImage(UIImage(named: "explosion"), for: .normal)
-                } else if cellState == 3 {
-                    button.backgroundColor = .white
-                    button.alpha = 0.5
-                }
+    
+    // Fonction pour remettre les visuels des bateaux à zéro pour le joueur suivant
+    func resetShipsToDock() {
+        for (ship, originalCenter) in originalShipCenters {
+            UIView.animate(withDuration: 0.5) {
+                ship.center = originalCenter
+                ship.transform = .identity
             }
         }
     }
     
-    func checkVictory() -> Bool {
-        let boardToCheck = (currentPlayerPlacing == 1) ? player2Board : player1Board
-        for row in boardToCheck {
-            for cell in row {
-                if cell == 1 {
-                    return false
-                }
+    // Cacher le dock et ses bateaux
+    func DispawnDock(){
+        UIView.animate(withDuration: 0.5, animations: {
+            self.dockStackView.alpha = 0 // On le rend invisible
+        }) { _ in
+            self.dockStackView.isHidden = true
+            for (ship, _) in self.originalShipCenters {
+                ship.isHidden = true
             }
         }
-        return true
-    }
-    
-    func handleVictory() {
-        print("VICTOIRE DU JOUEUR \(currentPlayerPlacing) !")
-        
-        gridStackView.isUserInteractionEnabled = false
-        
-        let alert = UIAlertController(
-            title: "VICTOIRE !",
-            message: "Le Joueur \(currentPlayerPlacing) a détruit toute la flotte ennemie bomboclaat",
-            preferredStyle: .alert
-        )
-        
-        let backToLobby = UIAlertAction(title: "Retour à l'accueil", style: .default) { _ in
-            print("Retour à l'accueil")
-            self.navigationController?.popToRootViewController(animated: true)
-        }
-        
-        alert.addAction(backToLobby)
-        
-        present(alert, animated: true)
     }
     
     // Fonction pour initialiser la grille de boutons
@@ -417,7 +421,7 @@ class GamePVPViewController: UIViewController {
         }
     }
     
-    // Gestion de
+    // Gestion de l'état des cases
     @objc func cellTapped(_ sender: UIButton) {
         guard tour >= 2 else { return }
         
