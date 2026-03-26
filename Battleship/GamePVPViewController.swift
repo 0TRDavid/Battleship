@@ -1,17 +1,18 @@
 //
 //  GamePVPViewController.swift
 //  Battleship
-//
+//  https://www.swisstransfer.com/d/957fa8ff-e373-47da-9c0d-a1f90936207c
 //  Created by David Truong on 18/03/2026.
-//
 
 import UIKit
+import AVFoundation
 
 class GamePVPViewController: UIViewController {
     
     // Info de base pour le déroulement de la partie
     var tour: Int = 0
     var currentPlayerPlacing = 1
+    var audioPlayer: AVAudioPlayer?
     
     // Initialisation des grilles J1 et J2
     var player1Board = Array(repeating: Array(repeating: 0, count: 10), count: 10)
@@ -127,7 +128,7 @@ class GamePVPViewController: UIViewController {
         
         let alert = UIAlertController(
             title: "VICTOIRE !",
-            message: "Le Joueur \(currentPlayerPlacing) a détruit toute la flotte ennemie bomboclaat",
+            message: "Le Joueur \(currentPlayerPlacing) a détruit toute la flotte ennemie !",
             preferredStyle: .alert
         )
         
@@ -421,6 +422,22 @@ class GamePVPViewController: UIViewController {
         }
     }
     
+    // Jouer du sons
+    func playSound(named soundName: String, startAt: TimeInterval = 0.0, playFor duration: TimeInterval? = nil) {
+        
+        let url = Bundle.main.url(forResource: soundName, withExtension: "mp3")
+        
+        audioPlayer = try? AVAudioPlayer(contentsOf: url!)
+        audioPlayer?.currentTime = startAt
+        audioPlayer?.play()
+        
+        if let playDuration = duration {
+            DispatchQueue.main.asyncAfter(deadline: .now() + playDuration) {
+                self.audioPlayer?.stop()
+            }
+        }
+    }
+    
     // Gestion de l'état des cases
     @objc func cellTapped(_ sender: UIButton) {
         guard tour >= 2 else { return }
@@ -467,11 +484,13 @@ class GamePVPViewController: UIViewController {
         guard isValidShot else { return }
         if isHit {
             sender.setImage(UIImage(named: "explosion"), for: .normal)
+            playSound(named: "touche", startAt: 0.0, playFor: 1.0)
             if checkVictory() {
                 handleVictory()
                 return
             }
         } else {
+            playSound(named: "rate", startAt: 1.0, playFor: 1.0)
             sender.backgroundColor = .white
             sender.alpha = 0.5
             sender.setImage(nil, for: .normal)
